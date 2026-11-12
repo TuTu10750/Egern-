@@ -1,0 +1,7 @@
+# Cue by Manus - Surge 规则集
+# 规则统计: 3
+# 来源: cue.im / manus.im / api.manus.ai
+# 用法: Egern -> 工具 -> 规则 -> + -> 类型 rule-set，粘贴本文件的远程 URL，策略选 智能选优
+DOMAIN-SUFFIX,cue.im
+DOMAIN-SUFFIX,manus.im
+DOMAIN-SUFFIX,manus.ai

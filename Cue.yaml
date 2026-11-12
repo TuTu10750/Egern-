@@ -1,0 +1,16 @@
+# 规则名称: Cue
+# 规则统计: 3
+# 规则来源: Cue by Manus 官方公开入口
+#   - cue.im (Cue 官方入口，2026-09-28 发布)
+#   - manus.im (Manus 网页版)
+#   - api.manus.ai (Manus API，见 open.manus.ai 文档，api.manus.ai/v2/)
+# 说明: Manus / Cue 未公布官方完整域名清单，本规则集为根据公开资料整理的最小核心集。
+#   domain_suffix_set 会匹配该域名及全部子域名，例如 cue.im 会匹配 www.cue.im、app.cue.im；
+#   manus.ai 会匹配 api.manus.ai、open.manus.ai 等。
+#   若导入后 Cue 仍有部分流量直连失败，请在 Egern「连接」里查看被直连/拦截的域名，再补进本文件。
+# 更新时间: 2026-11-12
+# 用法: Egern -> 工具 -> 规则 -> + -> 类型 rule-set，粘贴本文件的远程 URL，策略选 智能选优（或你的代理组）
+domain_suffix_set:
+  - cue.im
+  - manus.im
+  - manus.ai
