@@ -18,7 +18,7 @@ WidgetMetadata = {
   title: "XH Gay",
   description: "zh.xhzone.life 男同视频 · 最新/热门/分类/搜索，HLS 直连",
   author: "YG",
-  version: "1.0.0",
+  version: "1.0.1",
   requiredVersion: "0.0.1",
   detailCacheDuration: 30,
   site: "https://zh.xhzone.life",
