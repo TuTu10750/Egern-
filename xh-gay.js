@@ -160,8 +160,6 @@ function xhHeaders() {
     Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
     Referer: XH_BASE + "/",
-    Cookie:
-      "UID=154492442; recs_show_time=1794593346; stats_src_last=offline; x_content_preference_index=gay; redirect_disabled=1; x_csrf_token=1; x_platform_switch=mobile; h_v4_gay=%7B%22v%22%3A%5B%5D%2C%22l%22%3A%5B%5D%2C%22f%22%3A%5B%5D%2C%22pv%22%3A%5B18186752%5D%7D; cookie_accept_v2=%7B%22e%22%3A1%2C%22f%22%3A1%2C%22t%22%3A1%2C%22a%22%3A1%7D; settings=eyJleHREZXRlY3RlZFYyIjpmYWxzZSwiZXhwaXJlcyI6eyJleHREZXRlY3RlZFYyIjoxNzk0NDIzNDU2fSwiaXNXZWJtU3VwcG9ydGVkIjpmYWxzZSwiaXNXZWJwU3VwcG9ydGVkIjp0cnVlfQ%3D%3D; x_tgt=%7B%22login%22%3A%2211-11-2026%22%7D",
   };
 }
 
@@ -311,7 +309,7 @@ function parseList(html) {
   var seen = {};
 
   var cardRe =
-    /<div class="container-[^"]*video-thumb[^"]*"[^>]*data-video-id="(\d+)"[\s\S]*?(?=<div class="container-[^"]*video-thumb[^"]*"[^>]*data-video-id="|<div class="[^"]*pagination|$)/g;
+    /<div[^>]*class="[^"]*video-thumb[^"]*"[^>]*data-video-id="(\d+)"[\s\S]*?(?=<div[^>]*class="[^"]*video-thumb[^"]*"[^>]*data-video-id="|<div class="[^"]*pagination|$)/g;
 
   var cardMatch;
   while ((cardMatch = cardRe.exec(html)) !== null) {
