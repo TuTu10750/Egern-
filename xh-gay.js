@@ -249,7 +249,6 @@ async function fetchHtml(url) {
     try {
       var response = await Widget.http.get(url, {
         headers: xhHeaders(),
-        allow_redirects: true,
       });
       if (!response) throw new Error("空响应：" + url);
       // 兼容两种返回：对象 { data } 或直接返回字符串正文
