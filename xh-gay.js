@@ -258,24 +258,30 @@ async function xhHttp(url) {
     if (Widget.http && typeof Widget.http.get === "function") {
       var getResp = await Widget.http.get(url, { headers: headers });
       var getData = typeof getResp === "string" ? getResp : getResp && getResp.data;
+      console.log("[xh.gay] GET " + url + " -> " + (typeof getData === "string" ? getData.length : "非字符串") + " 字符，预览：" + String(getData || "").slice(0, 150).replace(/\s+/g, " "));
       if (typeof getData === "string" && getData && !xhLooksLikeErrorPage(getData)) return getData;
       if (getData && !xhLooksLikeErrorPage(String(getData))) {
         try { return JSON.stringify(getData); } catch (_) { return String(getData); }
       }
+      console.log("[xh.gay] GET 返回疑似错误页，改试 POST");
     }
   } catch (e) {
+    console.log("[xh.gay] GET 抛错：" + e.message);
     lastError = e;
   }
   try {
     if (Widget.http && typeof Widget.http.post === "function") {
       var postResp = await Widget.http.post(url, "", { headers: headers });
       var postData = typeof postResp === "string" ? postResp : postResp && postResp.data;
+      console.log("[xh.gay] POST " + url + " -> " + (typeof postData === "string" ? postData.length : "非字符串") + " 字符，预览：" + String(postData || "").slice(0, 150).replace(/\s+/g, " "));
       if (typeof postData === "string" && postData && !xhLooksLikeErrorPage(postData)) return postData;
       if (postData && !xhLooksLikeErrorPage(String(postData))) {
         try { return JSON.stringify(postData); } catch (_) { return String(postData); }
       }
+      console.log("[xh.gay] POST 返回疑似错误页");
     }
   } catch (e) {
+    console.log("[xh.gay] POST 抛错：" + e.message);
     lastError = e;
   }
   throw lastError || new Error("请求失败：" + url);
