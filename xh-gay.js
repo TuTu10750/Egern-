@@ -243,23 +243,42 @@ function xhSleep(ms) {
   });
 }
 
+async function xhHttp(url) {
+  var headers = xhHeaders();
+  var lastError = null;
+  // Rex 的 Widget.http 在成功案例 ONE 里只用 post（get 可能不存在），先试 post，失败再试 get
+  try {
+    if (Widget.http && typeof Widget.http.post === "function") {
+      var postResp = await Widget.http.post(url, "", { headers: headers });
+      var postData = typeof postResp === "string" ? postResp : postResp && postResp.data;
+      if (typeof postData === "string" && postData) return postData;
+      if (postData) {
+        try { return JSON.stringify(postData); } catch (_) { return String(postData); }
+      }
+    }
+  } catch (e) {
+    lastError = e;
+  }
+  try {
+    if (Widget.http && typeof Widget.http.get === "function") {
+      var getResp = await Widget.http.get(url, { headers: headers });
+      var getData = typeof getResp === "string" ? getResp : getResp && getResp.data;
+      if (typeof getData === "string" && getData) return getData;
+      if (getData) {
+        try { return JSON.stringify(getData); } catch (_) { return String(getData); }
+      }
+    }
+  } catch (e) {
+    lastError = e;
+  }
+  throw lastError || new Error("请求失败：" + url);
+}
+
 async function fetchHtml(url) {
   var lastError = null;
   for (var attempt = 1; attempt <= 3; attempt++) {
     try {
-      var response = await Widget.http.get(url, {
-        headers: xhHeaders(),
-      });
-      if (!response) throw new Error("空响应：" + url);
-      // 兼容两种返回：对象 { data } 或直接返回字符串正文
-      var data = typeof response === "string" ? response : response.data;
-      if (typeof data !== "string") {
-        try {
-          data = JSON.stringify(data);
-        } catch (_) {
-          data = String(data);
-        }
-      }
+      var data = await xhHttp(url);
       if (data) return data;
       throw new Error("空内容：" + url);
     } catch (error) {
