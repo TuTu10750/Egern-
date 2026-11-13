@@ -243,29 +243,36 @@ function xhSleep(ms) {
   });
 }
 
+function xhLooksLikeErrorPage(text) {
+  if (!text || typeof text !== "string") return true;
+  if (text.indexOf("error404-page") >= 0) return true;
+  if (text.indexOf("error-page") >= 0 && text.indexOf("data-video-id=") < 0) return true;
+  return false;
+}
+
 async function xhHttp(url) {
   var headers = xhHeaders();
   var lastError = null;
-  // Rex 的 Widget.http 在成功案例 ONE 里只用 post（get 可能不存在），先试 post，失败再试 get
+  // 网页是 GET 端点，先试 GET；POST 到页面 URL 会返回 404 错误页，必须识别出来再回落
   try {
-    if (Widget.http && typeof Widget.http.post === "function") {
-      var postResp = await Widget.http.post(url, "", { headers: headers });
-      var postData = typeof postResp === "string" ? postResp : postResp && postResp.data;
-      if (typeof postData === "string" && postData) return postData;
-      if (postData) {
-        try { return JSON.stringify(postData); } catch (_) { return String(postData); }
+    if (Widget.http && typeof Widget.http.get === "function") {
+      var getResp = await Widget.http.get(url, { headers: headers });
+      var getData = typeof getResp === "string" ? getResp : getResp && getResp.data;
+      if (typeof getData === "string" && getData && !xhLooksLikeErrorPage(getData)) return getData;
+      if (getData && !xhLooksLikeErrorPage(String(getData))) {
+        try { return JSON.stringify(getData); } catch (_) { return String(getData); }
       }
     }
   } catch (e) {
     lastError = e;
   }
   try {
-    if (Widget.http && typeof Widget.http.get === "function") {
-      var getResp = await Widget.http.get(url, { headers: headers });
-      var getData = typeof getResp === "string" ? getResp : getResp && getResp.data;
-      if (typeof getData === "string" && getData) return getData;
-      if (getData) {
-        try { return JSON.stringify(getData); } catch (_) { return String(getData); }
+    if (Widget.http && typeof Widget.http.post === "function") {
+      var postResp = await Widget.http.post(url, "", { headers: headers });
+      var postData = typeof postResp === "string" ? postResp : postResp && postResp.data;
+      if (typeof postData === "string" && postData && !xhLooksLikeErrorPage(postData)) return postData;
+      if (postData && !xhLooksLikeErrorPage(String(postData))) {
+        try { return JSON.stringify(postData); } catch (_) { return String(postData); }
       }
     }
   } catch (e) {
