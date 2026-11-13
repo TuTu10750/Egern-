@@ -236,22 +236,40 @@ function withImages(item, url) {
 
 // ───────────────────────── 请求 ─────────────────────────
 
-async function fetchHtml(url) {
-  var response = await Widget.http.get(url, {
-    headers: xhHeaders(),
-    allow_redirects: true,
+function xhSleep(ms) {
+  return new Promise(function (resolve) {
+    if (typeof setTimeout === "function") setTimeout(resolve, ms);
+    else resolve();
   });
-  if (!response) throw new Error("空响应：" + url);
-  // 兼容两种返回：对象 { data } 或直接返回字符串正文
-  var data = typeof response === "string" ? response : response.data;
-  if (typeof data !== "string") {
+}
+
+async function fetchHtml(url) {
+  var lastError = null;
+  for (var attempt = 1; attempt <= 3; attempt++) {
     try {
-      data = JSON.stringify(data);
-    } catch (_) {
-      data = String(data);
+      var response = await Widget.http.get(url, {
+        headers: xhHeaders(),
+        allow_redirects: true,
+      });
+      if (!response) throw new Error("空响应：" + url);
+      // 兼容两种返回：对象 { data } 或直接返回字符串正文
+      var data = typeof response === "string" ? response : response.data;
+      if (typeof data !== "string") {
+        try {
+          data = JSON.stringify(data);
+        } catch (_) {
+          data = String(data);
+        }
+      }
+      if (data) return data;
+      throw new Error("空内容：" + url);
+    } catch (error) {
+      lastError = error;
+      console.log("[xh.gay] fetch 失败 第" + attempt + "次：" + error.message);
+      if (attempt < 3) await xhSleep(2000);
     }
   }
-  return data || "";
+  throw lastError;
 }
 
 // ───────────────────────── 列表解析 ─────────────────────────
