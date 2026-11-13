@@ -1,5 +1,5 @@
 /**
- * Rex 模块：XH Gay（zh.xhofficial.com）
+ * Rex 模块：XH Gay（zh.xhzone.life 镜像站，主站 zh.xhofficial.com 在用户网络下无法访问）
  *
  * 契约严格对照 C:\Users\Fox-OS\Downloads\user.one.js（ONE一个 v2.2.0，Rex 已装成功）：
  *   - 条目 type: "detail"（不是 widget）
@@ -16,13 +16,13 @@
 WidgetMetadata = {
   id: "user.xhgay",
   title: "XH Gay",
-  description: "zh.xhofficial.com 男同视频 · 最新/热门/分类/搜索，HLS 直连",
+  description: "zh.xhzone.life 男同视频 · 最新/热门/分类/搜索，HLS 直连",
   author: "YG",
   version: "1.0.0",
   requiredVersion: "0.0.1",
   detailCacheDuration: 30,
-  site: "https://zh.xhofficial.com",
-  iconurl: "https://zh.xhofficial.com/favicon.ico",
+  site: "https://zh.xhzone.life",
+  iconurl: "https://zh.xhzone.life/favicon.ico",
 
   search: {
     title: "搜索 XH Gay",
@@ -147,7 +147,7 @@ WidgetMetadata = {
 
 // ───────────────────────── 常量 ─────────────────────────
 
-var XH_BASE = "https://zh.xhofficial.com";
+var XH_BASE = "https://zh.xhzone.life";
 var XH_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15";
 
@@ -265,7 +265,7 @@ function parseList(html) {
   var cardMatch;
   while ((cardMatch = cardRe.exec(html)) !== null) {
     var card = cardMatch[0];
-    var hrefMatch = card.match(/href="(https:\/\/zh\.xhofficial\.com\/videos\/[^"]+)"/i);
+    var hrefMatch = card.match(/href="(https:\/\/[^"\/]+\/videos\/[^"]+)"/i);
     if (!hrefMatch) continue;
     var url = hrefMatch[1];
     var slug = xhSlugFromUrl(url);
@@ -369,7 +369,7 @@ function parseDetail(html, fallbackUrl) {
   }
 
   var genres = [];
-  var genreRe = /href="https:\/\/zh\.xhofficial\.com\/(?:gay\/)?categories-([a-z0-9\-]+)"/gi;
+  var genreRe = /href="https:\/\/[^\/]+\/(?:gay\/)?categories-([a-z0-9\-]+)"/gi;
   var gm;
   while ((gm = genreRe.exec(html)) !== null) {
     var g = xhDecode(gm[1]);
