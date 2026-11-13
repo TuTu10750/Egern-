@@ -240,7 +240,8 @@ async function fetchHtml(url) {
     allow_redirects: true,
   });
   if (!response) throw new Error("空响应：" + url);
-  var data = response.data;
+  // 兼容两种返回：对象 { data } 或直接返回字符串正文
+  var data = typeof response === "string" ? response : response.data;
   if (typeof data !== "string") {
     try {
       data = JSON.stringify(data);
