@@ -10,10 +10,12 @@
  *
  * 数据来自自建后端（见 server.js）：
  *   GET {API}/api/live/list?tag=daddies&page=1   房间列表
- *   GET {API}/api/live/play?id=185707842          播放地址（播放那一刻才调）
  *
- * 关键设计：列表里【不带】播放地址，只在 loadResource 时现解析。
- * 直播流地址会失效，写死在列表里必然播不出来。
+ * 关键设计（v1.0.3 网页播放版）：
+ *   公开 HLS 地址播出来是 12 秒广告片（CDN 只给进过房间的观众放真流，
+ *   直接拿 m3u8 去播拿不到），所以改成网页播放：点房间后在 Rex 的
+ *   WebView 里打开网站房间页，用网站自己的播放器播直播。
+ *   列表仍由后端供，播放模块 requiresWebView: true。
  */
 
 // ★★★ 后端地址：新加坡服务器公网 IP，8787 端口 ★★★
@@ -21,11 +23,11 @@ var API_BASE = "http://49.0.207.168:8787";
 
 // ★★★ 模块 ID。Rex 按 ID 缓存，每次改代码必须换新 ID ★★★
 WidgetMetadata = {
-  id: "user.xllive3",
+  id: "user.xllive4",
   title: "XLive Men",
-  description: "xlivesex 男同直播 · 列表只给房间信息，播放地址在点开时才解析",
+  description: "xlivesex 男同直播 · 网页播放（网站自己的播放器播直播）",
   author: "YG",
-  version: "1.0.2",
+  version: "1.0.3",
   requiredVersion: "0.0.1",
   detailCacheDuration: 0,
   site: "https://zh.xlivesex.com",
@@ -43,8 +45,8 @@ WidgetMetadata = {
     {
       id: "xl-resource",
       title: "播放资源",
-      description: "按需解析直播流（播放时调用，地址会过期所以现取）",
-      requiresWebView: false,
+      description: "网页播放（网站自己的播放器播直播）",
+      requiresWebView: true,
       cacheDuration: 0,
       functionName: "loadResource",
       type: "stream",
@@ -285,7 +287,7 @@ async function loadList(params) {
       type: "detail",
       mediaType: "movie",
       title: r.title || String(r.id),
-      link: "xl://room/" + r.id,
+      link: "https://zh.xlivesex.com/" + encodeURIComponent(r.title || r.id),
       description: bits.join(" · "),
     };
     if (r.duration) {
@@ -347,17 +349,27 @@ function roomIdFromLink(link) {
   return "";
 }
 
+// 从链接里拿主播名（网页地址 https://zh.xlivesex.com/<username>）
+function usernameFromLink(link) {
+  var raw = String(link || "").trim();
+  var m = raw.match(/xlivesex\.com\/([^\/?#]+)/);
+  if (m) return decodeURIComponent(m[1]);
+  return "";
+}
+
 async function loadDetail(link) {
+  var username = usernameFromLink(link);
   var id = roomIdFromLink(link);
-  if (!id) throw new Error("无法识别房间链接：" + link);
+  var title = username || ("房间 " + id);
+  if (!username && !id) throw new Error("无法识别房间链接：" + link);
 
   return {
-    id: id,
+    id: id || username,
     type: "detail",
     mediaType: "movie",
-    title: "房间 " + id,
-    link: "xl://room/" + id,
-    description: "直播房间（播放地址在播放时解析）",
+    title: title,
+    link: String(link),
+    description: "直播房间（网页播放）",
   };
 }
 
@@ -366,40 +378,30 @@ async function loadDetail(link) {
 async function loadResource(params) {
   // Rex 有时传对象，有时直接传字符串
   var link = "";
+  var title = "";
   if (typeof params === "string") link = params;
-  else if (params) link = params.link || params.url || params.id || "";
-
-  var id = roomIdFromLink(link);
-
-  // 界面上可见的诊断（Rex 里看不到 console 日志）
-  if (!id) {
-    return [{ name: "⚠️ 未收到房间 id", description: "传进来的 link=" + String(link).slice(0, 80), url: "" }];
+  else if (params) {
+    link = params.link || params.url || params.id || "";
+    title = params.title || "";
   }
 
-  var data;
-  try {
-    data = await apiGet("/api/live/play", { id: id });
-  } catch (e) {
-    return [{ name: "❌ 解析接口失败", description: String(e.message || e).slice(0, 120), url: "" }];
+  // 优先用 link 里的网页地址
+  var webUrl = "";
+  if (String(link).indexOf("http") === 0) webUrl = String(link);
+  var username = usernameFromLink(link) || title;
+  if (!webUrl && username) webUrl = "https://zh.xlivesex.com/" + encodeURIComponent(username);
+
+  if (!webUrl) {
+    return [{ name: "⚠️ 未收到房间地址", description: "传进来的 link=" + String(link).slice(0, 80), url: "" }];
   }
 
-  if (!data || !data.ok || !data.hls) {
-    return [{
-      name: "❌ 没有解析到地址",
-      description: (data && (data.error || data.hint)) || "主播可能没在播",
-      url: "",
-    }];
-  }
+  console.log("[xl] loadResource webview -> " + webUrl);
 
-  console.log("[xl] loadResource " + id + " -> " + data.hls);
-
-  var out = [{
-    name: "直播 " + (data.quality || "源"),
-    description: "实时解析 · " + (data.source || ""),
-    url: data.hls,
+  return [{
+    name: "网页播放",
+    description: "网站自己的播放器播直播",
+    url: webUrl,
   }];
-
-  return out;
 }
 
 // 兼容别名
