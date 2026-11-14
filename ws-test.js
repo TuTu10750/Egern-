@@ -3,8 +3,10 @@
  * 用途：检查 Rex 的 Widget 运行环境里有没有 WebSocket，以及能不能连上
  * 用法：导进 Rex，打开「WS 测试」这个分类，看列表里的结果
  */
-const WidgetMetadata = {
-  id: "user.wstest1",
+
+// ★★★ 模块 ID。Rex 按 ID 缓存，每次改代码必须换新 ID ★★★
+WidgetMetadata = {
+  id: "user.wstest2",
   title: "WS 测试",
   description: "测试 Rex 里 WebSocket 是否可用",
   author: "YG",
@@ -12,7 +14,27 @@ const WidgetMetadata = {
   requiredVersion: "0.0.1",
   detailCacheDuration: 0,
   site: "https://zh.xlivesex.com",
-  iconurl: ""
+  iconurl: "https://zh.xlivesex.com/favicon.ico",
+
+  search: {
+    title: "搜索测试",
+    functionName: "searchVideos",
+    params: [
+      { name: "keyword", title: "关键词", type: "input", value: "" },
+    ],
+  },
+
+  modules: [
+    {
+      id: "ws-test-list",
+      title: "测试结果",
+      type: "list",
+      requiresWebView: false,
+      cacheDuration: 0,
+      loadList: loadList,
+      params: { kind: "test", page: 1 }
+    }
+  ]
 };
 
 // 测试一个 WebSocket 地址能不能连上（5 秒超时）
@@ -91,21 +113,13 @@ async function loadDetail(link) {
   return { title: "WS 测试", description: "看列表里的结果" };
 }
 
-const modules = [
-  {
-    id: "ws-test-list",
-    title: "测试结果",
-    type: "list",
-    requiresWebView: false,
-    cacheDuration: 0,
-    loadList: loadList,
-    params: { kind: "test", page: 1 }
-  }
-];
+async function searchVideos(params) {
+  return [];
+}
 
 function loadResource(params) { return []; }
-function searchVideos(keyword) { return []; }
-const getDetail = loadDetail;
-const loadResources = loadResource;
-const stream = loadResource;
-const mediaHook = loadResource;
+
+var getDetail = loadDetail;
+var loadResources = loadResource;
+var stream = loadResource;
+var mediaHook = loadResource;
