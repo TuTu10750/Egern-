@@ -285,17 +285,21 @@ async function xhHttp(url) {
   throw lastError || new Error("请求失败：" + url);
 }
 
+// Rex 里到网站的 TLS 连接会间歇性失败（09:12 日志：列表调用三次全是 TLS 错误），
+// 3 次重试、间隔 2 秒不够。改成 5 次、退避 1s/2s/4s/8s，总窗口约 15 秒，
+// 扛住短暂的网络抖动；如果 VPN 本身断了，重试也救不了。
 async function fetchHtml(url) {
+  var backoff = [1000, 2000, 4000, 8000];
   var lastError = null;
-  for (var attempt = 1; attempt <= 3; attempt++) {
+  for (var attempt = 1; attempt <= 5; attempt++) {
     try {
       var data = await xhHttp(url);
       if (data) return data;
       throw new Error("空内容：" + url);
     } catch (error) {
       lastError = error;
-      console.log("[xh.gay] fetch 失败 第" + attempt + "次：" + error.message);
-      if (attempt < 3) await xhSleep(2000);
+      console.log("[xh.gay] fetch 失败 第" + attempt + "/5次：" + error.message);
+      if (attempt < 5) await xhSleep(backoff[attempt - 1]);
     }
   }
   throw lastError;
