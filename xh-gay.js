@@ -648,16 +648,25 @@ async function loadDetail(link) {
 
 async function loadResource(params) {
   params = params || {};
+  console.log("[xh.gay] loadResource params=" + JSON.stringify(params));
   var link = params.link || params.url || params.id || "";
   var url = resolveLink(link);
+  console.log("[xh.gay] loadResource link=" + link + " -> url=" + url);
 
   if (!url) {
     console.log("[xh.gay] loadResource 无有效链接：" + link);
     return [];
   }
 
-  var rec = await resolveStream(url);
+  var rec;
+  try {
+    rec = await resolveStream(url);
+  } catch (error) {
+    console.log("[xh.gay] loadResource 取详情失败：" + error.message);
+    return [{ name: "取详情失败", description: error.message, url: "" }];
+  }
   var p = rec.parsed;
+  console.log("[xh.gay] loadResource 解析到 m3u8=" + (p.m3u8 ? "有" : "无") + " mp4=" + (p.previewMp4 ? "有" : "无"));
 
   var out = [];
 
@@ -684,7 +693,7 @@ async function loadResource(params) {
     return [{ name: "无可用播放源", description: "该条目没有解析到视频地址", url: "" }];
   }
 
-  console.log("[xh.gay] loadResource 资源数=" + out.length);
+  console.log("[xh.gay] loadResource 资源数=" + out.length + " 首条=" + (out[0] ? out[0].url.slice(0, 90) : ""));
   return out;
 }
 
