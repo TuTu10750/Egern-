@@ -649,13 +649,30 @@ async function loadDetail(link) {
 async function loadResource(params) {
   params = params || {};
   console.log("[xh.gay] loadResource params=" + JSON.stringify(params));
-  var link = params.link || params.url || params.id || "";
+  // Rex 可能直接传字符串链接，也可能传 {link,title} 对象，两种都接
+  var link = "";
+  if (typeof params === "string") link = params;
+  else link = params.link || params.url || params.id || "";
   var url = resolveLink(link);
   console.log("[xh.gay] loadResource link=" + link + " -> url=" + url);
 
   if (!url) {
-    console.log("[xh.gay] loadResource 无有效链接：" + link);
-    return [];
+    console.log("[xh.gay] loadResource 无有效链接");
+    return [{ name: "⚠️未收到链接", description: "params=" + JSON.stringify(params).slice(0, 120), url: XH_BASE + "/" }];
+  }
+
+  // 如果直接传进来的是 m3u8 地址，直接当 master 清单展开
+  if (/\.m3u8(\?|#|$)/i.test(url)) {
+    var playUrl = url;
+    try {
+      var manifest0 = await fetchHtml(url);
+      var best0 = pickBestVariant(manifest0, url);
+      if (best0) playUrl = best0;
+    } catch (e) {
+      console.log("[xh.gay] 展开 master 失败：" + e.message);
+    }
+    console.log("[xh.gay] loadResource 直连 m3u8 资源数=1");
+    return [{ name: "HLS", description: "最高码率", url: playUrl }];
   }
 
   var rec;
@@ -663,7 +680,7 @@ async function loadResource(params) {
     rec = await resolveStream(url);
   } catch (error) {
     console.log("[xh.gay] loadResource 取详情失败：" + error.message);
-    return [{ name: "取详情失败", description: error.message, url: "" }];
+    return [{ name: "❌抓详情失败", description: error.message, url: url }];
   }
   var p = rec.parsed;
   console.log("[xh.gay] loadResource 解析到 m3u8=" + (p.m3u8 ? "有" : "无") + " mp4=" + (p.previewMp4 ? "有" : "无"));
@@ -690,7 +707,8 @@ async function loadResource(params) {
   }
 
   if (!out.length) {
-    return [{ name: "无可用播放源", description: "该条目没有解析到视频地址", url: "" }];
+    console.log("[xh.gay] loadResource 未解析到地址");
+    return [{ name: "❌没解析到地址", description: "详情页已抓到但无 m3u8/mp4", url: url }];
   }
 
   console.log("[xh.gay] loadResource 资源数=" + out.length + " 首条=" + (out[0] ? out[0].url.slice(0, 90) : ""));
