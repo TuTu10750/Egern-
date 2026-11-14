@@ -1,0 +1,10 @@
+# 规则名称: Muse
+# 规则统计: 1
+# 规则来源: Muse 官方入口 muse.ai
+# 说明: Muse 未公布官方完整域名清单，本规则集为根据公开资料整理的最小核心集。
+#   domain_suffix_set 会匹配该域名及全部子域名，例如 muse.ai 会匹配 www.muse.ai、api.muse.ai；
+#   若导入后 Muse 仍有部分流量直连失败，请在 Egern「连接」里查看被直连/拦截的域名，再补进本文件。
+# 更新时间: 2026-11-14
+# 用法: Egern -> 工具 -> 规则 -> + -> 类型 rule-set，粘贴本文件的远程 URL，策略选 智能选优（或你的代理组）
+domain_suffix_set:
+  - muse.ai

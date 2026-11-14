@@ -1,0 +1,5 @@
+# Muse - Surge 规则集
+# 规则统计: 1
+# 来源: muse.ai
+# 用法: Egern -> 工具 -> 规则 -> + -> 类型 rule-set，粘贴本文件的远程 URL，策略选 智能选优
+DOMAIN-SUFFIX,muse.ai
