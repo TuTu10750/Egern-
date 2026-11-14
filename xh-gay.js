@@ -365,7 +365,6 @@ function parseList(html) {
       title: title,
       link: url,
       description: descBits.join(" · "),
-      videoUrl: "",
     };
     if (durationText) item.durationText = durationText;
 
