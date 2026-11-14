@@ -169,23 +169,33 @@ function hlsCandidates(id) {
 }
 
 /**
- * 从直播页实时抓最新地址。
+ * 从各分类第 1 页的 API 里实时找该房间的最新地址。
  * 列表里的 hlsPlaylist 会失效（实测有 404 的情况），所以必须现抓。
+ * 只查每分类第 1 页（前 37 个），深页的房间靠模板构造那一步。
  */
 async function hlsFromListPage(id) {
   for (const tag of TAGS) {
-    let page;
+    let resp;
     try {
-      page = await curl(`${SITE}/men/${tag}`);
+      resp = await curl(
+        `${SITE}/api/front/models?primaryTag=men&tag=${encodeURIComponent(tag)}&offset=0&limit=${PAGE_SIZE}`,
+        ["-H", "Accept: application/json"]
+      );
     } catch (_) {
       continue;
     }
-    if (page.status !== 200) continue;
+    if (resp.status !== 200) continue;
 
-    const rooms = extractModels(page.body);
+    let data;
+    try {
+      data = JSON.parse(resp.body);
+    } catch (_) {
+      continue;
+    }
+    const rooms = data.models || [];
     const hit = rooms.find((r) => String(r.id) === String(id) || String(r.streamName) === String(id));
     if (hit && hit.hlsPlaylist) {
-      return { url: unescapeSlashes(hit.hlsPlaylist), room: hit, from: `men/${tag}` };
+      return { url: unescapeSlashes(hit.hlsPlaylist), room: hit, from: `api:${tag}` };
     }
   }
   return null;
@@ -229,32 +239,37 @@ function json(res, code, payload) {
   res.end(body);
 }
 
+const PAGE_SIZE = 37;
+
 async function handleList(query, res) {
   const tag = (query.get("tag") || "daddies").toLowerCase().replace(/[^a-z0-9-]/g, "");
   const page = Math.max(1, parseInt(query.get("page") || "1", 10) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
 
-  const path = page === 1 ? `/men/${tag}` : `/men/${tag}/${page}`;
-  const url = SITE + path;
+  // 主路：调站点的 /api/front/models 接口，offset 分页，能拿到该分类的全部房间
+  // （HTML 首屏只内嵌前 37 个，往下翻是走这个接口；/men/<tag>/<page> 这种 URL 翻页是无效的，返回的还是前 37 个）
+  const apiUrl = `${SITE}/api/front/models?primaryTag=men&tag=${encodeURIComponent(tag)}&offset=${offset}&limit=${PAGE_SIZE}`;
 
   let resp;
   try {
-    resp = await curl(url);
+    resp = await curl(apiUrl, ["-H", "Accept: application/json"]);
   } catch (e) {
-    return json(res, 502, { ok: false, error: "抓取失败", detail: e.message, url });
+    return json(res, 502, { ok: false, error: "抓取失败", detail: e.message, url: apiUrl });
   }
 
   if (resp.status !== 200) {
-    return json(res, 502, { ok: false, error: `站点返回 ${resp.status}`, url });
+    return json(res, 502, { ok: false, error: `站点接口返回 ${resp.status}`, url: apiUrl });
   }
 
-  const rooms = extractModels(resp.body).map(toRoom).filter((r) => r.id);
-  if (!rooms.length) {
-    return json(res, 200, {
-      ok: true, tag, page, count: 0, liveCount: 0, rooms: [],
-      note: "该分类没有解析到房间，可能分类名不对或页面结构变了",
-      source: url,
-    });
+  let data;
+  try {
+    data = JSON.parse(resp.body);
+  } catch (e) {
+    return json(res, 502, { ok: false, error: "接口返回的不是 JSON", url: apiUrl });
   }
+
+  const rooms = (data.models || []).map(toRoom).filter((r) => r.id);
+  const total = Number(data.filteredCount || data.totalCount || 0);
 
   return json(res, 200, {
     ok: true,
@@ -262,7 +277,9 @@ async function handleList(query, res) {
     page,
     count: rooms.length,
     liveCount: rooms.filter((r) => r.isOnline).length,
-    source: url,
+    total,
+    hasMore: rooms.length === PAGE_SIZE && (total === 0 || offset + rooms.length < total),
+    source: apiUrl,
     fetchedAt: new Date().toISOString(),
     rooms,
   });
