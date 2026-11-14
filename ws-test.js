@@ -6,7 +6,7 @@
 
 // ★★★ 模块 ID。Rex 按 ID 缓存，每次改代码必须换新 ID ★★★
 WidgetMetadata = {
-  id: "user.wstest2",
+  id: "user.wstest3",
   title: "WS 测试",
   description: "测试 Rex 里 WebSocket 是否可用",
   author: "YG",
@@ -26,13 +26,29 @@ WidgetMetadata = {
 
   modules: [
     {
-      id: "ws-test-list",
-      title: "测试结果",
-      type: "list",
+      id: "ws-test-resource",
+      title: "播放资源",
+      description: "测试模块不需要播放",
       requiresWebView: false,
       cacheDuration: 0,
-      loadList: loadList,
-      params: { kind: "test", page: 1 }
+      functionName: "loadResource",
+      type: "stream",
+      params: [
+        { name: "link", title: "链接", type: "input", value: "" },
+        { name: "title", title: "标题", type: "input", value: "" },
+      ],
+    },
+    {
+      id: "ws-test-list",
+      title: "测试结果",
+      description: "WebSocket 可用性测试结果",
+      requiresWebView: false,
+      cacheDuration: 0,
+      functionName: "loadList",
+      params: [
+        { name: "kind", title: "类型", type: "constant", value: "test" },
+        { name: "page", title: "页码", type: "page" },
+      ],
     }
   ]
 };
