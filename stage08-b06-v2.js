@@ -137,6 +137,8 @@ async function runStage(id, name, fn) {
 
     // ── B06-04 浏览器真实会话请求 initial-dynamic ──
     let fetched = null;
+    let hits = [];
+    let parseNote = "";
     if (!failedStage) {
       const apiUrl = `/api/front/v3/config/initial-dynamic?requestPath=%2F${ROOM}`;
       const s04 = await runStage("B06-04", "fetch-initial-dynamic", async () => {
@@ -183,8 +185,6 @@ async function runStage(id, name, fn) {
     }
 
     // ── B06-06 递归检索 ──
-    let hits = [];
-    let parseNote = "";
     if (!failedStage) {
       const s06 = await runStage("B06-06", "recursive-search", async () => {
         const KEY_EXACT = new Set(["websocket", "websocketApps", "token", "url", "initialClient", "config"]);
