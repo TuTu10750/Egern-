@@ -10,12 +10,15 @@
  *     但 WS 实际连上了（token 是 JWT，运行时从别处拿到的）
  *   所以 v1 只是“打开页面等着”，播放器根本没启动。
  *
- * v2 改动：
- *   1. 进房后主动点播放：依次尝试点 video 元素、大播放按钮等候选选择器，
- *      每一步记日志；随后复查 video 状态（paused/currentTime/readyState/src）。
- *   2. 新增 requestfailed 日志：解释 master 请求有去无回的原因。
- *   3. 收尾汇总所有 /api/ 请求 URL（去重）：追踪 WS token 和 master pkey 的来源。
- *   4. 默认时长改为 120 秒。
+ * v2.1（2026-11-15 13:26，按 Arue 的第二轮动态取证要求补强）：
+ *   证据链 E01 订阅：WS 双向帧全文记录（JWT 已脱敏），点播放后是否出现 subscribe；
+ *   证据链 E02 JWT 来源：收尾汇总 api-summary（逐条 /api/ 的方法 + 状态码），
+ *     响应体含 eyJ 时记 jwt-in-response；
+ *   证据链 E03 pkey 来源：响应体含 pkey 时记 pkey-in-response（带上下文片段）；
+ *   证据链 E04 播放器状态：player-state 增加 video.error，新增 pageerror、
+ *     requestfailed 日志；严格区分 请求发出 / HTTP 响应 / 状态码 / 响应正文。
+ *   保护要求：不伪造任何凭证；v1 日志不动；v2 用独立输出目录（OUT_DIR）；
+ *     JWT/Cookie 在日志里脱敏，pkey 原文只留在服务端日志里、对外报告脱敏。
  *
  * 敏感信息处理：Cookie / Token / 签名只写进本地日志文件，不输出到 stdout，
  * 日志文件留在服务器上，由人工取回分析，不上传、不公开。
@@ -71,6 +74,10 @@ function maskHeaders(h) {
   }
   return out;
 }
+// WS 帧里的 JWT 做脱敏（日志里不留完整凭证；pkey 保留原文在服务端日志里以便追溯来源，对外报告再脱敏）
+function maskJwt(s) {
+  return String(s || "").replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, (m) => mask(m));
+}
 
 (async () => {
   const { chromium } = require("playwright");
@@ -84,11 +91,15 @@ function maskHeaders(h) {
   const page = await ctx.newPage();
 
   const apiUrls = new Set();
+  const apiSummary = new Map(); // url -> {method, status}，用于 E02：逐条 /api/ 的方法 + 状态码
 
   // ── HTTP 请求/响应/失败 ──
   page.on("request", (req) => {
     const url = req.url();
-    if (url.includes("/api/")) apiUrls.add(url.slice(0, 300));
+    if (url.includes("/api/")) {
+      apiUrls.add(url.slice(0, 300));
+      if (!apiSummary.has(url)) apiSummary.set(url, { method: req.method(), status: null });
+    }
     const interesting =
       url.includes("/cam") || url.includes(".m3u8") || url.includes("/api/") ||
       url.includes("websocket") || url.includes("centrifugo");
@@ -101,6 +112,9 @@ function maskHeaders(h) {
   });
   page.on("response", async (res) => {
     const url = res.url();
+    if (url.includes("/api/") && apiSummary.has(url)) {
+      apiSummary.get(url).status = res.status();
+    }
     const interesting =
       url.includes("/cam") || url.includes(".m3u8") || url.includes("/api/") ||
       url.includes("websocket") || url.includes("centrifugo");
@@ -115,6 +129,28 @@ function maskHeaders(h) {
       try {
         const text = await res.text();
         bodySnippet = text.slice(0, 2000); // m3u8 全文
+      } catch (_) {}
+    }
+    // E02/E03：/api/ 响应里是否出现 pkey 或 JWT（追踪凭证来源）
+    if (url.includes("/api/")) {
+      try {
+        const text = await res.text();
+        const pIdx = text.toLowerCase().indexOf("pkey");
+        if (pIdx >= 0) {
+          log("pkey-in-response", {
+            url: url.slice(0, 300),
+            status: res.status(),
+            snippet: text.slice(Math.max(0, pIdx - 100), pIdx + 300),
+          });
+        }
+        const jIdx = text.indexOf("eyJ");
+        if (jIdx >= 0) {
+          log("jwt-in-response", {
+            url: url.slice(0, 300),
+            status: res.status(),
+            snippet: maskJwt(text.slice(Math.max(0, jIdx - 100), jIdx + 300)),
+          });
+        }
       } catch (_) {}
     }
     log("response", {
@@ -141,7 +177,7 @@ function maskHeaders(h) {
       log("ws-sent", {
         url: ws.url(),
         opcode: frame.opcode,
-        payload: payload.slice(0, 4000),
+        payload: maskJwt(payload).slice(0, 4000),
       });
     });
     ws.on("framereceived", (frame) => {
@@ -153,11 +189,16 @@ function maskHeaders(h) {
         url: ws.url(),
         opcode: frame.opcode,
         isStreamChanged,
-        payload: payload.slice(0, 8000),
+        payload: maskJwt(payload).slice(0, 8000),
       });
     });
     ws.on("close", () => log("ws-close", { url: ws.url() }));
     ws.on("socketerror", (e) => log("ws-error", { url: ws.url(), error: String(e && e.message || e).slice(0, 300) }));
+  });
+
+  // ── 页面错误 ──
+  page.on("pageerror", (e) => {
+    log("pageerror", { error: String(e && e.message || e).slice(0, 300) });
   });
 
   // ── 播放器状态探针 ──
@@ -171,6 +212,7 @@ function maskHeaders(h) {
             paused: v.paused,
             currentTime: Number(v.currentTime.toFixed(2)),
             readyState: v.readyState,
+            error: v.error ? { code: v.error.code, message: (v.error.message || "").slice(0, 200) } : null,
             src: (v.currentSrc || v.src || "").slice(0, 160),
             videoWidth: v.videoWidth,
             videoHeight: v.videoHeight,
@@ -252,6 +294,11 @@ function maskHeaders(h) {
 
   // 收尾：汇总去重后的 /api/ 请求 URL（找 token / pkey 来源）
   log("api-urls", { count: apiUrls.size, urls: Array.from(apiUrls).slice(0, 200) });
+  // 收尾：逐条 /api/ 的方法 + 状态码（E02 完整证据）
+  log("api-summary", {
+    count: apiSummary.size,
+    entries: Array.from(apiSummary.entries()).map(([u, v]) => ({ method: v.method, status: v.status, url: u.slice(0, 300) })),
+  });
 
   await browser.close();
   out.end();
