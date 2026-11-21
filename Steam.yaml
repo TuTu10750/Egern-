@@ -1,0 +1,37 @@
+# 规则名称: Steam
+# 规则统计: 20
+# 规则来源: Valve 官方代理放行清单 + LM-Firefly/Rules Game/Steam.list
+# 说明: 只收商店/社区/API/聊天/图片这类网页流量，走代理。
+#   domain_suffix_set 会匹配该域名及全部子域名，例如 steampowered.com 会匹配
+#   store.steampowered.com、api.steampowered.com。
+#   下载 CDN 被有意排除在外：steamcontent.com、steamcdn-a.akamaihd.net、
+#   akamaihd.net 及国内 CDN（steamchina.com、tnkjmec.com 等）不在本文件里，
+#   它们会按你原来的规则直连，走国内 CDN 下载又快又不耗 VPS 流量。
+#   游戏下载走代理的话，一个 50GB 的游戏就要烧掉约 40 元流量费，别这么干。
+#   若导入后商店/社区仍有部分图片加载不出来，请在 Egern「连接」里查看被直连
+#   的域名，再补进本文件。
+# 更新时间: 2026-11-21
+# 用法: Egern -> 工具 -> 规则 -> + -> 类型 rule-set，粘贴本文件的远程 URL，策略选 智能选优（或你的代理组）
+domain_suffix_set:
+  # 商店 / 社区 / API / 客户端核心
+  - steampowered.com
+  - steamcommunity.com
+  - steamgames.com
+  - steamusercontent.com
+  - steamstatic.com
+  - steam-chat.com
+  - steam.tv
+  - steamdeck.com
+  - steamserver.net
+  - steamstat.us
+  - valvesoftware.com
+  - s.team
+  - steam-api.com
+  - underlords.com
+  # Akamai 图片/视频节点（商店头像、截图、视频用；下载用的 steamcdn-a 不在内）
+  - steamcommunity-a.akamaihd.net
+  - steamstore-a.akamaihd.net
+  - steamusercontent-a.akamaihd.net
+  - steamuserimages-a.akamaihd.net
+  - steamvideo-a.akamaihd.net
+  - steambroadcast.akamaized.net
