@@ -7,6 +7,7 @@
 *      上千秒但实际只有几十秒画面，播放器按 moov 建轴→画面冻住、进度条照走）。
 *   2) 保留一条"录像 · 原始"线：ffmpeg 重封装失败时仍可播（虽然可能冻帧）。
 *   3) 保留 v1.9.16 房型预检、v1.9.15 房型识别、v1.9.14 重试、v1.9.13 兜底链、v1.9.12 guard。
+*   4) 播放时自动收藏默认开：不用手动去设置里填 1；不想自动收藏时填 0 关掉。
 *
 * v1.9.16 关键变化（2026-11-22）：
 *   1) 播放前先预检房型：群演房(groupShow)、私密房(private)、已离线(isLive=false)
@@ -205,7 +206,7 @@ params: [
 { name: "token", title: "访问 Token（可留空）", type: "input", value: ""},
 { name: "favIds", title: "关注主播 ID（整串替换，逗号隔开）", type: "input", value: ""},
 { name: "addFavId", title: "添加主播 ID（只加这一个，不覆盖已有的）", type: "input", value: ""},
-{ name: "autoFav", title: "播放时自动收藏（填 1 开启，填 0 关闭，默认关）", type: "input", value: ""},
+{ name: "autoFav", title: "播放时自动收藏（填 1 开启，填 0 关闭，默认开）", type: "input", value: ""},
 ],
 },
 {
@@ -293,9 +294,9 @@ if (isFinite(n) && n > 0 && out.indexOf(n) < 0) out.push(n);
 return out.length ? out : DEFAULT_FAV_IDS.slice();
 }
 
-// 播放时自动收藏是否开启（本机存的，默认关）
+// 播放时自动收藏是否开启（本机存的，默认开；填 0 才关）
 function autoFavOn() {
-return String(storeGet(XL_AUTOFAV_KEY) || "").trim() === "1";
+return String(storeGet(XL_AUTOFAV_KEY) || "").trim() !== "0";
 }
 
 // 清洗一串主播 ID：只留数字，逗号隔开，去重
@@ -832,8 +833,8 @@ if (!p.id) {
 return [{ name: "⚠️ 未收到房间 id", description: "link=" + String(link).slice(0, 80), url: ""}];
 }
 
-// 播放即收藏（开关，默认关）：只在「播放时自动收藏」开了才加，
-// 避免点开看一眼不喜欢的也进列表造成污染
+// 播放即收藏（开关，默认开）：除非「播放时自动收藏」填了 0，
+// 否则播放就自动把主播加进关注列表；不想加就填 0 关掉
 if (autoFavOn()) {
 try {
 var playId = parseInt(p.id, 10);
